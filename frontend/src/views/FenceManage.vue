@@ -193,6 +193,7 @@
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import BikeMap from '@/components/BikeMap.vue'
 import { fences as fencesApi } from '@/api'
+import { useConfirm } from '@/utils/confirm.js'
 
 const bikeMapRef = ref(null)
 const fences = ref([])
@@ -256,16 +257,31 @@ function handleRowClick(fence) {
 function handleDrawingComplete(points) {
   formData.points = points
   editingMode.value = false
+  showModal.value = true
+  showToast('围栏范围绘制完成', 'success')
 }
 
 function toggleMapEdit() {
   if (editingMode.value) {
     if (bikeMapRef.value) {
-      bikeMapRef.value.resetDrawing()
+      bikeMapRef.value.finishDrawing()
     }
   } else {
+    if (!formData.name.trim()) {
+      showToast('请先填写围栏名称', 'error')
+      return
+    }
+    if (!formData.district) {
+      showToast('请先选择行政区', 'error')
+      return
+    }
+    if (!formData.capacity) {
+      showToast('请先填写容量', 'error')
+      return
+    }
     editingMode.value = true
-    formData.points = []
+    showModal.value = false
+    showToast('请在地图上点击绘制围栏顶点，双击完成', 'info')
   }
 }
 
@@ -335,8 +351,8 @@ async function saveFence() {
       await fencesApi.create(data)
       showToast('围栏创建成功')
     }
-    closeModal()
     await loadFences()
+    closeModal()
   } catch (err) {
     const msg = err.response?.data?.message || err.message || '保存失败'
     showToast(msg, 'error')
@@ -344,9 +360,14 @@ async function saveFence() {
 }
 
 async function confirmDelete(fence) {
-  if (!window.confirm(`确定要删除围栏"${fence.name}"吗？\n围栏内的车辆将被移出。`)) {
-    return
-  }
+  const confirmed = await useConfirm({
+    title: '确认删除围栏',
+    message: `确定要删除围栏"${fence.name}"吗？\n围栏内的车辆将被移出。`,
+    type: 'warning',
+    confirmText: '确认删除',
+    cancelText: '取消'
+  })
+  if (!confirmed) return
   try {
     await fencesApi.remove(fence.id)
     showToast('围栏删除成功')

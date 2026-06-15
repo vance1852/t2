@@ -103,7 +103,7 @@
         <circle
           :cx="bike.x * scaleX"
           :cy="bike.y * scaleY"
-          r="bike.status === 'illegal' ? 8 : 5"
+          :r="bike.status === 'illegal' ? 8 : 5"
           :fill="getBikeColor(bike.status)"
           stroke="#fff"
           stroke-width="1.5"
@@ -346,7 +346,7 @@ function resetDrawing() {
   drawingPoints.value = []
 }
 
-defineExpose({ resetDrawing })
+defineExpose({ resetDrawing, finishDrawing })
 </script>
 
 <style scoped>

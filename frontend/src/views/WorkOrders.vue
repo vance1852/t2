@@ -305,6 +305,7 @@
 import { ref, reactive, onMounted, computed, watch, nextTick } from 'vue'
 import BikeMap from '@/components/BikeMap.vue'
 import { workOrders, fences } from '@/api'
+import { useConfirm } from '@/utils/confirm.js'
 
 const orders = ref([])
 const selectedOrder = ref(null)
@@ -452,7 +453,14 @@ async function handleAssign(order) {
 }
 
 async function handleComplete(order) {
-  if (!window.confirm('确认完成该工单？')) return
+  const confirmed = await useConfirm({
+    title: '确认完成工单',
+    message: `确定要将工单 ${order.order_no} 标记为已完成吗？`,
+    type: 'warning',
+    confirmText: '确认完成',
+    cancelText: '取消'
+  })
+  if (!confirmed) return
   try {
     const res = await workOrders.complete(order.id)
     showToast('工单已完成')
@@ -661,7 +669,7 @@ onMounted(async () => {
   border-radius: 10px;
   padding: 14px 16px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.2s;
 }
 
 .order-card:hover {
@@ -827,6 +835,7 @@ onMounted(async () => {
 
 .assign-wrapper {
   position: relative;
+  display: inline-block;
 }
 
 .action-btn {
@@ -836,7 +845,7 @@ onMounted(async () => {
   font-weight: 500;
   cursor: pointer;
   border: none;
-  transition: all 0.2s;
+  transition: background 0.2s;
 }
 
 .btn-primary {
@@ -860,14 +869,14 @@ onMounted(async () => {
 .assign-dropdown {
   position: absolute;
   right: 0;
-  top: 110%;
+  top: calc(100% + 8px);
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   padding: 12px;
   width: 220px;
-  z-index: 100;
+  z-index: 1000;
 }
 
 .dropdown-header {
