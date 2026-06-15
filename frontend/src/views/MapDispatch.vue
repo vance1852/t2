@@ -286,28 +286,30 @@ const activeTaskCount = computed(() => {
 const currentDispatchMoves = computed(() => {
   if (!currentTask.value || !currentTask.value.moves) return []
   return currentTask.value.moves.map(move => {
-    const fromFence = fences.value.find(f => f.id === move.fromFenceId)
-    const toFence = fences.value.find(f => f.id === move.toFenceId)
+    const fromFence = fences.value.find(f => f.id === move.from_fence_id || f.id === move.fromFenceId)
+    const toFence = fences.value.find(f => f.id === move.to_fence_id || f.id === move.toFenceId)
     return {
       ...move,
-      fromX: fromFence?.centerLon || 0,
-      fromY: fromFence?.centerLat || 0,
-      toX: toFence?.centerLon || 0,
-      toY: toFence?.centerLat || 0
+      fromX: fromFence?.center_x || 0,
+      fromY: fromFence?.center_y || 0,
+      toX: toFence?.center_x || 0,
+      toY: toFence?.center_y || 0
     }
   })
 })
 
 async function loadMapData() {
   try {
-    const data = await publicMap.mapData()
-    fences.value = data.fences || []
-    bikes.value = data.bikes || []
-    stats.value = {
-      fenceCount: data.stats?.fenceCount || 0,
-      totalBikes: data.stats?.totalBikes || 0,
-      illegalCount: data.stats?.illegalCount || 0,
-      faultCount: data.stats?.faultCount || 0
+    const resp = await publicMap.mapData()
+    if (resp.success && resp.data) {
+      fences.value = resp.data.fences || []
+      bikes.value = resp.data.bikes || []
+      stats.value = {
+        fenceCount: resp.data.fences?.length || 0,
+        totalBikes: resp.data.bikes?.length || 0,
+        illegalCount: resp.data.illegalCount || 0,
+        faultCount: resp.data.faultCount || 0
+      }
     }
     const now = new Date()
     lastRefreshTime.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
@@ -318,11 +320,12 @@ async function loadMapData() {
 
 async function loadDispatchTasks() {
   try {
-    const data = await dispatch.list({ pageSize: 10 })
-    const list = data.list || data || []
+    const resp = await dispatch.list({ pageSize: 10 })
+    const list = (resp.success && resp.data) ? resp.data : []
     const active = list.find(t => t.status === 'pending' || t.status === 'processing')
     if (active) {
-      currentTask.value = await dispatch.detail(active.id)
+      const detailResp = await dispatch.detail(active.id)
+      currentTask.value = (detailResp.success && detailResp.data) ? detailResp.data : active
     } else {
       currentTask.value = null
     }
@@ -387,10 +390,12 @@ function toggleHighlightFence(id) {
 async function handleGenerateDispatch() {
   generating.value = true
   try {
-    const task = await dispatch.generate()
-    currentTask.value = task
-    showArrows.value = true
-    activeTab.value = 'tasks'
+    const resp = await dispatch.generate()
+    if (resp.success && resp.data) {
+      currentTask.value = resp.data
+      showArrows.value = true
+      activeTab.value = 'tasks'
+    }
   } catch (err) {
     console.error('生成调运任务失败:', err)
   } finally {
@@ -402,8 +407,10 @@ async function handleCompleteMove(moveId) {
   if (!currentTask.value) return
   try {
     await dispatch.completeMove(currentTask.value.id, moveId)
-    const updated = await dispatch.detail(currentTask.value.id)
-    currentTask.value = updated
+    const updatedResp = await dispatch.detail(currentTask.value.id)
+    if (updatedResp.success && updatedResp.data) {
+      currentTask.value = updatedResp.data
+    }
     await loadMapData()
   } catch (err) {
     console.error('完成调运失败:', err)

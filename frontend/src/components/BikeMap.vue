@@ -297,6 +297,10 @@ function getBikeColor(status) {
       return '#8b5cf6'
     case 'in_fence':
       return '#22c55e'
+    case 'low_battery':
+      return '#f59e0b'
+    case 'idle':
+      return '#3b82f6'
     default:
       return '#6b7280'
   }
