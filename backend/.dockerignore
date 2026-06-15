@@ -3,7 +3,4 @@ dist
 data
 *.db
 *.sqlite
-*.log
-.DS_Store
-.env
-.env.local
+npm-debug.log*

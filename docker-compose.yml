@@ -1,0 +1,44 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bike-fence-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      - backend-data:/app/data
+    networks:
+      - bike-fence-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bike-fence-frontend
+    restart: unless-stopped
+    ports:
+      - "6391:6391"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - bike-fence-net
+    environment:
+      - VITE_API_BASE=http://backend:3000
+
+volumes:
+  backend-data:
+    driver: local
+
+networks:
+  bike-fence-net:
+    driver: bridge
